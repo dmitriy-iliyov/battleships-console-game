@@ -26,4 +26,4 @@
 	• перезапуск партії.
 • Графічний інтерфейс (описаний у классі DrawFunc):
 Містить функції для відображення кораблів, референс:
-![Иллюстрация к проекту](https://github.com/jon/coolproject/raw/master/image/image.png)
+![Приклад графічного інтерфейсу](https://github.com/dmitriy-iliyov/SE-course-work/blob/main/Снимок%20экрана%202023-03-27%20в%2019.31.24.png)
