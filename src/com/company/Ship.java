@@ -10,6 +10,10 @@ public class Ship extends Rectangle {
     public int x;
     public int y;
     public boolean horizon;
+    public boolean killed = false;
+    public boolean deleted = false;
+
+
     public Ship (int size, int deck, int startX, int startY, boolean horizon, int x, int y)
     {
         super();

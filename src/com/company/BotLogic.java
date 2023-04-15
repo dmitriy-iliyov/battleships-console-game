@@ -3,29 +3,28 @@ import java.lang.Math;
 import java.util.ArrayList;
 
 class BotLogic extends Matrix {
-    private int [][] shootsMatrix = new int[10][10];
+    private int [][] shootsMatrix = new int[10][10];//bot streliaet
     private boolean shipHitted = false;
     private int hittedShipType = 0;//1-vert; 2-hor
     private int [] hittedShipPoint = new int[2];
     private int [] shootedShipPoint = new int[2];
-    //private int killedShipsCountByMe = 0;
+
     private boolean continueShooting = false;
     private ArrayList <int []> pointsForShoot4x4 = new ArrayList <int []>();
     private ArrayList <int []> pointsForShoot3x3_2x2 = new ArrayList <int []>();
     private ArrayList <int []> pointsForShoot1x1 = new ArrayList <int []>();
     public PlayerLogic Player;
-    //private Matrix botShips;
+
+
     public BotLogic() {
         super();
-        //this.botShips = new Matrix();
         this._pointsForShootCreate();
-//        Error.printMatrix(this.botShips.matrix,"_botShipsMatrix");
-    }
-    public int getKilledShipsCount(){
-        return this.killedShipsCountByEnemy;
     }
     public void setPlayer(PlayerLogic player) {
         this.Player = player;
+    }
+    public int getKilledShipsCount(){
+        return this.killedShipsCountByEnemy;
     }
     private void _pointsForShootCreate()
     {
@@ -81,7 +80,7 @@ class BotLogic extends Matrix {
 //        }
 //        Error.printMatrix(this.shootsMatrix, "shootsMatrix");
     }
-    public boolean _botShootAfterHitting()
+    private boolean _botShootAfterHitting()
     {
         Error.printStr("_botShootAfterHitting x=" + this.hittedShipPoint[0] + ", y="+this.hittedShipPoint[1]);
         if (this.shipHitted) {
@@ -144,12 +143,15 @@ class BotLogic extends Matrix {
         Error.printStr("_shootByPoint x=" + x + ", y="+y);
         this.shootedShipPoint[0] = x;
         this.shootedShipPoint[1] = y;
-        //Error.printStr("_shootByPoint "+x+","+y);
+
         if (this.shootsMatrix[x][y] != 0) {
             Error.errMsg("_shootByPoint");
             return false;
         }
-        int res = this.Player.checkHit(x,y);
+        this.shootsMatrix[x][y] = 2;
+        int res = this.Player.checkEnemyHit(x,y);
+        if (res == 0)
+            this.enemyCanShoot = true;
         Error.printStr("bot Hit by "+x+"x"+y+"="+res);
         if (res == 3) {//ubit
             this.shootsMatrix[x][y] = 1;//popal
@@ -170,8 +172,8 @@ class BotLogic extends Matrix {
             this.shipHitted = true;
             this.continueShooting = true;//prodolzhaem streliat
             if (this.hittedShipType == 0) {
-                Error.printArray(this.shootedShipPoint);
-                Error.printArray(this.hittedShipPoint);
+                Error.printArray(this.shootedShipPoint,"shootedShipPoint from _shootByPoint");
+                Error.printArray(this.hittedShipPoint, "hittedShipPoint from _shootByPoint");
                 if (this.shootedShipPoint[0] == this.hittedShipPoint[0] && Math.abs(this.shootedShipPoint[1] - this.hittedShipPoint[1]) == 1)
                     this.hittedShipType = 2;//hor
                 else if (this.shootedShipPoint[1] == this.hittedShipPoint[1] && Math.abs(this.shootedShipPoint[0] - this.hittedShipPoint[0]) == 1)
@@ -187,6 +189,14 @@ class BotLogic extends Matrix {
         }
         return true;
     }
+    /*   public int checkEnemyHit (int x, int y)
+       {
+           int res = super.checkEnemyHit(x, y);
+           if (res == 0)
+               this.playerCanNotShoot = true;
+           return res;
+       }
+     */
     private void _markShipBorder (int row, int col, int lng, boolean horizon)
     {
         if (horizon) {
@@ -316,4 +326,3 @@ class BotLogic extends Matrix {
         return this._shootByPoint(x, y-1);//streliaem
     }
 }
-

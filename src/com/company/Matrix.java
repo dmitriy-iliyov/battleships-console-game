@@ -12,34 +12,30 @@ class Matrix {
     protected ArrayList <MShip> objArray = new ArrayList<MShip>();
     protected int killedShipsCountByMe = 0;
     protected int killedShipsCountByEnemy = 0;
-
     private int [] _fillCoord = new int[2];
+    protected boolean enemyCanShoot = true;
     public  Matrix() {
         this.Fill();
         this.hitsMatrix = this.matrix;
     }
-    public void delShip(int x, int y, int lng, boolean horizon) {
-    }
-    public void addShip(int x, int y, int lng, boolean horizon) {
-    }
-    public MShip getShip (int x, int y) {
-        if (x < 0 || x > 9 || y < 0 || y > 9)
-            return null;
-        MShip ship = this.objArray.get(this.objIndexMatrix[x][y]);
-        Error.printStr("getShip x="+ship.x + ", y=" +ship.y + ", killed="+(ship.killed ?1:0));
-        if (!ship.killed)
-            return null;
-        return ship;
-    }
-
-    public int checkHit (int x, int y)//enemyHit
+    public int checkEnemyHit (int x, int y)//enemyHit
     {
+        if (!this.enemyCanShoot)
+            return 0;
         if (x < 0 || x > 9 || y < 0 || y > 9)
             return 0;
-        Error.printStr("x="+x+",y="+y);
-        MShip ship = this.objArray.get(this.objIndexMatrix[x][y]);
-        if (this.hitsMatrix[x][y] != 1 && this.hitsMatrix[x][y] != 3)
+        Error.printStr("checkEnemyHit x="+x+",y="+y);
+
+        if (this.hitsMatrix[x][y] != 1 && this.hitsMatrix[x][y] != 3) {
+            this.enemyCanShoot = false;
             return 0;
+        }
+        if (this.objIndexMatrix[x][y] == 0) {
+            this.enemyCanShoot = false;
+            return 0;
+        }
+
+        MShip ship = this.objArray.get(this.objIndexMatrix[x][y]-1);
         if (this.hitsMatrix[x][y] != 3) {
             this.hitsMatrix[x][y] = 3;
             ship.hitted++;
@@ -47,7 +43,7 @@ class Matrix {
                 ship.killed = true;
                 this.killedShipsCountByEnemy++;
             }
-            this.objArray.set(this.objIndexMatrix[x][y], ship);
+            this.objArray.set(this.objIndexMatrix[x][y]-1, ship);
         }
         if (ship.killed)
             return 3;
@@ -60,60 +56,165 @@ class Matrix {
          */
     }
 
-    public void addToMatrix2RoundShips() {
-        for (int i = 0; i < this.objArray.size(); i++) {
-            this.addToMatrix2RoundOneShip(this.objArray.get(i).x, this.objArray.get(i).y, this.objArray.get(i).lng, this.objArray.get(i).horizon, 2);
+    public MShip getShip (int x, int y) {
+        if (!this.existShip(x,y))
+            return null;
+        MShip ship = this.objArray.get(this.objIndexMatrix[x][y]-1);
+        Error.printStr("getShip x="+ship.x + ", y=" +ship.y + ", killed="+(ship.killed ?1:0));
+        if (!ship.killed)
+            return null;
+        return ship;
+    }
+    public boolean existShip (int x, int y) {
+        if (x < 0 || x > 9 || y < 0 || y > 9) {
+            Error.errMsg("!existShip1 " + x +"x" +y);
+            return false;
+        }
+        if (this.objIndexMatrix[x][y] == 0) {
+            Error.errMsg("!existShip2 " + x +"x" +y);
+            return false;
+        }
+        if (this.objIndexMatrix[x][y] > this.objArray.size()) {
+            Error.errMsg("!existShip3 " + x +"x" +y+" i="+this.objIndexMatrix[x][y]);
+            return false;
+        }
+        return true;
+    }
+    public boolean delShip(int x, int y, int lng, boolean horizon) {
+        if (!this.existShip(x,y))
+            return false;
+
+        int ind = this.objIndexMatrix[x][y]-1;
+        Error.printMatrix(this.objIndexMatrix,"objIndexMatrix before delShip ind="+ind);
+        this.objArray.remove(ind);
+
+        for (int i =0; i < 10; i++){
+            for (int j =0; j < 10; j++){
+                if ((this.objIndexMatrix[i][j]-1) > ind)
+                    this.objIndexMatrix[i][j]--;
+            }
+        }
+
+        if (horizon) {
+            for (int i = 0; i < lng; i++) {
+                this.matrix[x][y + i] = 0;
+                this.objIndexMatrix[x][y + i] = 0;
+            }
+        } else {
+            for (int i = 0; i < lng; i++) {
+                this.matrix[x + i][y] = 0;
+                this.objIndexMatrix[x + i][y] = 0;
+            }
+        }
+        this._delFromMatrix2RoundShips();
+        this.addToMatrix2RoundShips();
+        Error.printMatrix(this.objIndexMatrix,"objIndexMatrix after delShip ind="+ind);
+        Error.printMatrix(this.matrix,"matrix after delShip");
+        return true;
+    }
+    public boolean addShip(int x, int y, int lng, boolean horizon) {
+        if (!this._canAddShip( x,  y,  lng,  horizon))
+            return false;
+        this._shipCreate( x,  y,  lng,  horizon);
+        addToMatrix2RoundOneShip( x,  y,  lng,  horizon);
+        Error.printMatrix(this.matrix,"matrix after addShip");
+        return true;
+    }
+    private boolean _canAddShip(int x, int y, int lng, boolean horizon) {
+        if (x < 0 || x > 9 || y < 0 || y > 9) {
+            Error.errMsg("!_canAddShip " + x +"x" +y);
+            return false;
+        }
+        if (horizon) {
+            if (y + lng - 1 > 9)
+                return false;
+            if (y > 0 && this.matrix[x][y -1] == 1)
+                return false;
+            if (y+ lng - 1 < 9 && this.matrix[x][y + lng] == 1)
+                return false;
+            for (int i = 0; i < lng; i++) {
+                if (this.matrix[x][y + i] == 1)
+                    return false;
+            }
+        } else {
+            if (x + lng - 1 > 9)
+                return false;
+            if (x > 0 && this.matrix[x-1][y] == 1)
+                return false;
+            if (x+ lng - 1 < 9 && this.matrix[x+lng][y] == 1)
+                return false;
+            for (int i = 0; i < lng; i++) {
+                if (this.matrix[x + i][y + i] == 1)
+                    return false;
+            }
+        }
+        return true;
+    }
+    private void _delFromMatrix2RoundShips() {
+        for (int row = 0; row < 10; row++) {
+            for (int col = 0; col < 10; col++) {
+                if (this.matrix[row][col] == 2 || this.matrix[row][col] == 4)
+                    this.matrix[row][col] = 0;
+            }
         }
     }
-    private void addToMatrix2RoundOneShip(int x, int y, int lng, boolean horizon, int val) {
+    public void addToMatrix2RoundShips() {
+        for (int i = 0; i < this.objArray.size(); i++) {
+            this.addToMatrix2RoundOneShip(this.objArray.get(i).x, this.objArray.get(i).y, this.objArray.get(i).lng, this.objArray.get(i).horizon);
+        }
+    }
+    private void addToMatrix2RoundOneShip(int x, int y, int lng, boolean horizon) {
         if (horizon) {
             if (y > 0) {
-                this.matrix[x][y - 1] = val;
+                this.matrix[x][y - 1] = this._getVal2or4(this.matrix[x][y - 1]);
                 if (x > 0)
-                    this.matrix[x - 1][y - 1] = val;
+                    this.matrix[x - 1][y - 1] = this._getVal2or4(this.matrix[x - 1][y - 1]);
                 if (x < 9)
-                    this.matrix[x + 1][y - 1] = val;
+                    this.matrix[x + 1][y - 1] = this._getVal2or4(this.matrix[x + 1][y - 1]);
             }
             for (int j = 0; j < lng; j++) {
                 if (x > 0)
-                    this.matrix[x - 1][y + j] = val;
+                    this.matrix[x - 1][y + j] = this._getVal2or4(this.matrix[x - 1][y + j]);
                 if (x < 9)
-                    this.matrix[x + 1][y + j] = val;
-                this.matrix[x][y + j] = (val == 2 ? 1 : 0);
+                    this.matrix[x + 1][y + j] = this._getVal2or4(this.matrix[x + 1][y + j]);
+                //this.matrix[x][y + j] = 1;
             }
             if (y + lng < 10) {
-                this.matrix[x][y + lng] = val;
+                this.matrix[x][y + lng] = this._getVal2or4(this.matrix[x][y + lng]);
                 if (x > 0)
-                    this.matrix[x - 1][y + lng] = val;
+                    this.matrix[x - 1][y + lng] = this._getVal2or4(this.matrix[x - 1][y + lng]);
                 if (x < 9)
-                    this.matrix[x + 1][y + lng] = val;
+                    this.matrix[x + 1][y + lng] = this._getVal2or4(this.matrix[x + 1][y + lng]);
             }
         } else {
             if (x > 0) {
-                this.matrix[x - 1][y] = val;
+                this.matrix[x - 1][y] = this._getVal2or4(this.matrix[x - 1][y]);
                 if (y > 0)
-                    this.matrix[x - 1][y - 1] = val;
+                    this.matrix[x - 1][y - 1] = this._getVal2or4(this.matrix[x - 1][y - 1]);
                 if (y < 9)
-                    this.matrix[x - 1][y + 1] = val;
+                    this.matrix[x - 1][y + 1] = this._getVal2or4(this.matrix[x - 1][y + 1]);
             }
             for (int j = 0; j < lng; j++) {
                 if (y > 0)
-                    this.matrix[x + j][y - 1] = val;
+                    this.matrix[x + j][y - 1] = this._getVal2or4(this.matrix[x + j][y - 1]);
                 if (y < 9)
-                    this.matrix[x + j][y + 1] = val;
-                this.matrix[x + j][y] = (val == 2 ? 1 : 0);
+                    this.matrix[x + j][y + 1] = this._getVal2or4(this.matrix[x + j][y + 1]);
+                //this.matrix[x + j][y] = 1;
             }
             if (x + lng < 10) {
-                this.matrix[x + lng][y] = val;
+                this.matrix[x + lng][y] = this._getVal2or4(this.matrix[x + lng][y]);
                 if (y > 0)
-                    this.matrix[x + lng][y - 1] = val;
+                    this.matrix[x + lng][y - 1] = this._getVal2or4(this.matrix[x + lng][y - 1]);
                 if (y < 9)
-                    this.matrix[x + lng][y + 1] = val;
+                    this.matrix[x + lng][y + 1] = this._getVal2or4(this.matrix[x + lng][y + 1]);
             }
         }
     }
-
-    public boolean allShipsKilled () {
+    private int _getVal2or4(int i)
+    {
+        return (i ==2 ? 4 : 2);
+    }
+    public boolean allMyShipsKilled () {
         return (this.killedShipsCountByEnemy > 9);
     }
     private void  Fill() {
@@ -267,22 +368,20 @@ class Matrix {
     }
     private void _shipCreate(int x, int y, int shipLng, boolean horizon) {
         MShip ship = new MShip(x,y,shipLng,horizon);
-        //this.objArray[0] = ship;
         this.objArray.add(ship);
         int xy = (horizon ? y : x);
         for (int i = 0; i < shipLng; i++) {
             //System.out.println(x2+" "+y2);
             if (horizon) {
                 this.matrix[x][xy] = 1;
-                this.objIndexMatrix[x][xy] = this.objArray.size()-1;
+                this.objIndexMatrix[x][xy] = this.objArray.size();
             } else {
                 this.matrix[xy][y] = 1;
-                this.objIndexMatrix[xy][y] = this.objArray.size()-1;
+                this.objIndexMatrix[xy][y] = this.objArray.size();
             }
             xy++;
         }
     }
-
     private boolean _setShip4x3ByEmptySide(int side, int shipLng)//row must be empty
     {
         int x = 0;
@@ -399,7 +498,6 @@ class Matrix {
             return true;
         return false;
     }
-
     private boolean _setShip1ByCenter()//universal
     {
         int x = (int) (Math.random()*(9 - 0 + 1)) + 0;
@@ -440,7 +538,6 @@ class Matrix {
         Error.printStr("_setShip2ByCenter Falls" + x + ","+y);
         return false;
     }
-
     private boolean _setShip3ByCenter()//universal
     {
         int x = (int) (Math.random()*(9 - 0 + 1)) + 0;
